@@ -1,0 +1,124 @@
+-- ==========================================
+-- CodeQuest Database Setup
+-- Author: Buraga Akshaya
+-- ==========================================
+
+CREATE DATABASE IF NOT EXISTS codequest_db;
+USE codequest_db;
+
+-- 1. Admin table
+
+CREATE TABLE IF NOT EXISTS admins (
+    id INT NOT NULL AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2. Users table
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT NOT NULL AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    total_xp INT DEFAULT 0,
+    player_level INT DEFAULT 1,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY username (username),
+    UNIQUE KEY email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 3. Missions table
+
+CREATE TABLE IF NOT EXISTS missions (
+    id INT NOT NULL AUTO_INCREMENT,
+    title VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(30) NOT NULL,
+    difficulty VARCHAR(20) NOT NULL,
+    option_a VARCHAR(255) NOT NULL,
+    option_b VARCHAR(255) NOT NULL,
+    option_c VARCHAR(255) NOT NULL,
+    option_d VARCHAR(255) NOT NULL,
+    correct_answer VARCHAR(255) NOT NULL,
+    xp_reward INT NOT NULL DEFAULT 50,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    PRIMARY KEY (id),
+    KEY fk_mission_admin (created_by),
+    CONSTRAINT fk_mission_admin
+        FOREIGN KEY (created_by) REFERENCES admins(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4. Mission submissions table
+
+CREATE TABLE IF NOT EXISTS mission_submissions (
+    id INT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    mission_id INT NOT NULL,
+    answer VARCHAR(255) NOT NULL,
+    is_correct TINYINT(1) DEFAULT 0,
+    completed_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY unique_user_mission (user_id, mission_id),
+    KEY fk_submission_mission (mission_id),
+    CONSTRAINT fk_submission_mission
+        FOREIGN KEY (mission_id) REFERENCES missions(id),
+    CONSTRAINT fk_submission_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ==========================================
+-- DEMO ADMIN ACCOUNT
+-- Username: admin
+-- Password: Admin@123
+-- ==========================================
+
+INSERT INTO admins (username, password)
+SELECT 'admin', 'Admin@123'
+WHERE NOT EXISTS (
+    SELECT 1 FROM admins WHERE username = 'admin'
+);
+
+-- ==========================================
+-- SAMPLE EASY MISSION
+-- ==========================================
+
+INSERT INTO missions (
+    title,
+    description,
+    category,
+    difficulty,
+    option_a,
+    option_b,
+    option_c,
+    option_d,
+    correct_answer,
+    xp_reward,
+    created_by
+)
+SELECT
+    'Python Variable Challenge',
+    'Which symbol is used to assign a value to a variable in Python?',
+    'Python',
+    'Easy',
+    '==',
+    '=',
+    '!=',
+    '+=',
+    '=',
+    10,
+    id
+FROM admins
+WHERE username = 'admin'
+AND NOT EXISTS (
+    SELECT 1 FROM missions
+    WHERE title = 'Python Variable Challenge'
+);
+
+-- ==========================================
+-- DATABASE SETUP COMPLETED
+-- ==========================================

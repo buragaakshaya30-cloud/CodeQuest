@@ -1,0 +1,14 @@
+# Maven build files
+target/
+
+# Eclipse files
+.metadata/
+.settings/
+.classpath
+.project
+
+# macOS files
+.DS_Store
+
+# Logs
+*.log
