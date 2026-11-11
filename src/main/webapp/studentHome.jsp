@@ -169,7 +169,7 @@ response.setDateHeader("Expires", 0);
             journey into an epic adventure.
         </p>
 
-        <a href="<%= request.getContextPath() %>/missions"
+         <a href="<%= request.getContextPath() %>/startQuest.jsp"
    class="start-btn">START YOUR QUEST </a>
             <span></span>
         </a>
@@ -221,10 +221,11 @@ response.setDateHeader("Expires", 0);
             <div class="mission-footer">
                 <strong><span class="trophy">🏆</span> +100 XP</strong>
    
-   <a href="<%=request.getContextPath()%>/missions?difficulty=LogicStarter" class="play-btn">
-    PLAY NOW 
-</a>
-            </div>
+<a href="<%=request.getContextPath()%>/logicStarter.jsp"
+   class="play-btn">
+    PLAY NOW
+</a>      
+</div>
 
         </div>
 
@@ -259,8 +260,9 @@ response.setDateHeader("Expires", 0);
 
             <div class="mission-footer">
                 <strong><span class="trophy">🏆</span> +150 XP</strong>
-                <a href="<%= request.getContextPath() %>/missions?difficulty=Medium"
-   class="play-btn">PLAY NOW </a>
+                <a href="<%=request.getContextPath()%>/arrayArchitect.jsp" class="play-btn">
+    PLAY NOW
+</a>
             </div>
 
         </div>
@@ -372,8 +374,9 @@ response.setDateHeader("Expires", 0);
 
             <div class="mission-footer">
                 <strong><span class="trophy">🏆</span> +250 XP</strong>
-                <a href="<%= request.getContextPath() %>/missions?difficulty=Hard"
-   class="play-btn">PLAY NOW </a>
+             <a href="<%=request.getContextPath()%>/algorithmMaster.jsp" class="play-btn">
+    PLAY NOW
+</a>
             </div>
 
         </div>

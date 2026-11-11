@@ -189,7 +189,7 @@ input:focus {
         <div class="message"><%= error %></div>
     <% } %>
 
-    <form action="<%= context %>/adminlogin" method="post">
+    <form action="${pageContext.request.contextPath}/adminlogin" method="post">
 
         <label for="username">Admin Username</label>
 

@@ -22,9 +22,17 @@ public class LeaderboardServlet extends HttpServlet {
             throws ServletException, IOException {
 
         HttpSession session = request.getSession(false);
+        
 
-        if (session == null || session.getAttribute("userEmail") == null) {
-            response.sendRedirect(request.getContextPath() + "/login.jsp");
+        boolean isAdmin = session != null &&
+                session.getAttribute("adminUsername") != null;
+
+        boolean isStudent = session != null &&
+                session.getAttribute("userEmail") != null;
+
+        if (!isAdmin && !isStudent) {
+            response.sendRedirect(
+                request.getContextPath() + "/adminLogin.jsp");
             return;
         }
 
@@ -33,6 +41,7 @@ public class LeaderboardServlet extends HttpServlet {
         List<String[]> leaderboard = dao.getLeaderboard();
 
         request.setAttribute("leaderboard", leaderboard);
+        request.setAttribute("isAdmin", isAdmin);
 
         request.getRequestDispatcher("/leaderboard.jsp")
                .forward(request, response);

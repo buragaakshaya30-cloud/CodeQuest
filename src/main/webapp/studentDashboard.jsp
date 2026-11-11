@@ -1,450 +1,875 @@
 
-<%@ page import="java.util.List" %>
-<%@ page import="com.codequest.dao.UserDAO" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="java.sql.*" %>
+<%@ page import="java.util.*" %>
 
 <%
-    response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    response.setHeader("Pragma", "no-cache");
-    response.setDateHeader("Expires", 0);
-
     String userEmail = (String) session.getAttribute("userEmail");
-    Integer userId = (Integer) session.getAttribute("userId");
 
-    if (userEmail == null || userId == null) {
-        response.sendRedirect(request.getContextPath() + "/login.jsp");
+    if (userEmail == null) {
+        response.sendRedirect("login.jsp");
         return;
     }
 
-    UserDAO dao = new UserDAO();
+    String displayName = userEmail.contains("@")
+            ? userEmail.substring(0, userEmail.indexOf("@"))
+            : userEmail;
 
-    int totalMissions = dao.getTotalMissions();
-    int totalXP = dao.getTotalXP(userEmail);
-    int level = dao.getLevel(userEmail);
-    int completedMissions = dao.getCompletedMissions(userId);
+    displayName = displayName.substring(0, 1).toUpperCase()
+            + displayName.substring(1);
 
-    List<String[]> completedMissionDetails =
-            dao.getCompletedMissionDetails(userId);
+    int totalMissions = 0;
+    int totalXP = 0;
+    int currentLevel = 1;
+    int completedMissions = 0;
+
+    boolean dbError = false;
+    List<String[]> recentActivities = new ArrayList<String[]>();
+
+    String dbUrl = System.getenv("DB_URL");
+    String dbUser = System.getenv("DB_USERNAME");
+    String dbPassword = System.getenv("DB_PASSWORD");
+
+    try {
+        if (dbUrl == null || dbUser == null || dbPassword == null) {
+            throw new Exception("Database environment variables are missing.");
+        }
+
+        Class.forName("com.mysql.cj.jdbc.Driver");
+
+        try (Connection con = DriverManager.getConnection(
+                dbUrl, dbUser, dbPassword)) {
+
+            int userId = 0;
+
+            // STUDENT DETAILS
+            String userSql =
+                "SELECT id, total_xp, player_level FROM users WHERE email = ?";
+
+            try (PreparedStatement ps = con.prepareStatement(userSql)) {
+                ps.setString(1, userEmail);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        userId = rs.getInt("id");
+                        totalXP = rs.getInt("total_xp");
+                        currentLevel = rs.getInt("player_level");
+                    }
+                }
+            }
+
+            // TOTAL MISSIONS
+            String missionSql = "SELECT COUNT(*) FROM missions";
+
+            try (PreparedStatement ps = con.prepareStatement(missionSql);
+                 ResultSet rs = ps.executeQuery()) {
+
+                if (rs.next()) {
+                    totalMissions = rs.getInt(1);
+                }
+            }
+
+            // COMPLETED MISSIONS
+            String completedSql =
+                "SELECT COUNT(*) FROM mission_submissions " +
+                "WHERE user_id = ? AND is_correct = 1";
+
+            try (PreparedStatement ps = con.prepareStatement(completedSql)) {
+                ps.setInt(1, userId);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        completedMissions = rs.getInt(1);
+                    }
+                }
+            }
+
+            // RECENT ACTIVITY
+            String activitySql =
+                "SELECT m.title, ms.completed_at, m.xp_reward " +
+                "FROM mission_submissions ms " +
+                "JOIN missions m ON ms.mission_id = m.id " +
+                "WHERE ms.user_id = ? AND ms.is_correct = 1 " +
+                "ORDER BY ms.completed_at DESC LIMIT 5";
+
+            try (PreparedStatement ps = con.prepareStatement(activitySql)) {
+                ps.setInt(1, userId);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        String title = rs.getString("title");
+                        String date = rs.getString("completed_at");
+                        int reward = rs.getInt("xp_reward");
+
+                        recentActivities.add(new String[]{
+                            title,
+                            date == null ? "" : date,
+                            String.valueOf(reward)
+                        });
+                    }
+                }
+            }
+        }
+
+    } catch (Exception e) {
+        dbError = true;
+        application.log("Student Dashboard database error", e);
+    }
+
+    int progress = Math.min(100,
+            Math.max(0, (int)(totalXP * 100.0 / 250)));
 %>
 
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard | CodeQuest</title>
 
-    <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+<title>Student Dashboard | CodeQuest</title>
 
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            color: #f8f2ff;
-            background: #100817;
-        }
+<style>
 
-        .student-dashboard {
-            min-height: 100vh;
-            padding: 30px 7%;
-            background:
-                linear-gradient(
-                    rgba(16, 8, 23, 0.78),
-                    rgba(16, 8, 23, 0.90)
-                ),
-                url("images/student-bg.png") center center / cover fixed;
-        }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        /* Navigation */
-        .dashboard-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 18px;
-            padding: 10px 0 25px;
-            border-bottom: 1px solid rgba(189, 122, 255, 0.35);
-        }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: white;
+    min-height: 100vh;
 
-        .dashboard-logo {
-            color: white;
-            font-size: 29px;
-            font-weight: 900;
-            text-decoration: none;
-            letter-spacing: -1px;
-        }
+    background:
+        linear-gradient(rgba(25, 9, 43, 0.38),
+                        rgba(25, 9, 43, 0.55)),
+        url("images/castle.png") center center / cover fixed;
+}
 
-        .dashboard-logo span {
-            color: #bd7aff;
-        }
+/* NAVIGATION */
 
-        .nav-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
+nav {
+    height: 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 5%;
 
-        .nav-btn {
-            display: inline-block;
-            padding: 12px 23px;
-            border: 1px solid #ffc45c;
-            border-radius: 30px;
-            color: #ffc45c;
-            background: rgba(40, 20, 55, 0.85);
-            text-decoration: none;
-            font-weight: bold;
-            transition: 0.3s;
-        }
+    background: rgba(31, 12, 48, 0.96);
+    border-bottom: 2px solid #e8b64c;
 
-        .nav-btn:hover {
-            background: #ffc45c;
-            color: #100817;
-            box-shadow: 0 0 18px rgba(255, 196, 92, 0.5);
-            transform: translateY(-2px);
-        }
+    position: relative;
+    z-index: 10;
+}
 
-        .dashboard-user {
-            display: block;
-            width: fit-content;
-            margin: 18px 0 0 auto;
-            padding: 10px 22px;
-            color: #e1c9f5;
-            background: rgba(40, 20, 55, 0.8);
-            border: 1px solid rgba(189, 122, 255, 0.4);
-            border-radius: 25px;
-            font-size: 14px;
-        }
+.logo {
+    color: #ffd36b;
+    font-family: Georgia, serif;
+    font-size: 27px;
+    font-weight: bold;
+}
 
-        /* Welcome */
-        .welcome-section {
-            margin: 55px 0 35px;
-        }
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 38px;
+}
+nav a,
+.nav-actions a,
+.navbar a {
+    text-decoration: none;
+}
 
-        .welcome-label {
-            color: #bd7aff;
-            letter-spacing: 4px;
-            font-size: 13px;
-            font-weight: bold;
-        }
+.nav-links a {
+    text-decoration: none;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    transition: 0.3s;
+}
 
-        .welcome-section h1 {
-            font-size: 42px;
-            margin: 15px 0;
-            font-family: Georgia, serif;
-        }
+.nav-links a:hover {
+    color: #ffd36b;
+}
 
-        .welcome-section h1 span {
-            color: #ffc45c;
-        }
+.logout {
+    padding: 10px 23px;
+    border: 1px solid #e9b84b;
+    border-radius: 25px;
+    color: #ffd36b !important;
+}
+.logout-btn {
+    text-decoration: none !important;
+}
 
-        .welcome-description {
-            color: #d4c5df;
-            font-size: 16px;
-            line-height: 1.8;
-        }
+/* MAIN CONTAINER */
 
-        /* Statistics */
-        .dashboard-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
-            margin: 40px 0 55px;
-        }
+.container {
+    width: 90%;
+    max-width: 1320px;
+    margin: 28px auto;
+}
 
-        .stat-card {
-            position: relative;
-            padding: 30px;
-            min-height: 155px;
-            border-radius: 18px;
-            border: 1px solid rgba(189, 122, 255, 0.55);
-            background: rgba(35, 19, 48, 0.86);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 18px rgba(150, 70, 220, 0.12);
-            transition: 0.3s ease;
-            overflow: hidden;
-        }
+/* WELCOME SECTION */
 
-        .stat-card:hover {
-            transform: translateY(-7px);
-            border-color: #ffc45c;
-            box-shadow: 0 0 25px rgba(255, 196, 92, 0.25);
-        }
+.welcome {
+    margin-bottom: 22px;
+}
 
-        .stat-card::after {
-            content: "";
-            position: absolute;
-            width: 90px;
-            height: 90px;
-            right: -25px;
-            top: -25px;
-            border-radius: 50%;
-            background: rgba(189, 122, 255, 0.10);
-        }
+.welcome h1 {
+    font-family: Georgia, serif;
+    font-size: 39px;
+    margin-bottom: 9px;
+    color: #fff5e9;
+}
 
-        .stat-icon {
-            font-size: 25px;
-            margin-bottom: 12px;
-        }
+.welcome h1 span {
+    color: #ffd36b;
+}
 
-        .stat-card p {
-            margin: 0;
-            color: #d4c5df;
-            font-size: 16px;
-        }
+.welcome p {
+    color: #f0e3f5;
+    font-size: 16px;
+}
 
-        .stat-card h2 {
-            margin: 12px 0 0;
-            font-size: 36px;
-            color: #bd7aff;
-        }
+.welcome-line {
+    width: 330px;
+    height: 2px;
+    margin-top: 18px;
+    background: linear-gradient(90deg, #ffd36b, transparent);
+}
 
-        /* Programming journey */
-        .missions-section {
-            padding: 35px;
-            border: 1px solid rgba(189, 122, 255, 0.55);
-            border-radius: 20px;
-            background: rgba(32, 17, 45, 0.91);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 25px rgba(150, 70, 220, 0.15);
-        }
+/* PROGRESS SECTION */
 
-        .section-heading {
-            font-family: Georgia, serif;
-            font-size: 29px;
-            margin: 0 0 12px;
-            color: #fff4ff;
-        }
+.progress-section {
+    display: grid;
+    grid-template-columns: 155px 1fr;
+    align-items: center;
+    gap: 28px;
 
-        .mission-message {
-            color: #d4c5df;
-            line-height: 1.8;
-        }
+    padding: 20px 28px;
+    margin-bottom: 23px;
 
-        .completed-mission {
-            padding: 22px;
-            margin-top: 20px;
-            border: 1px solid rgba(189, 122, 255, 0.35);
-            border-left: 4px solid #ffc45c;
-            border-radius: 13px;
-            background: rgba(16, 8, 23, 0.85);
-            transition: 0.3s;
-        }
+    background: rgba(42, 17, 58, 0.96);
+    border: 2px solid #d7a443;
+    border-radius: 19px;
 
-        .completed-mission:hover {
-            border-color: #ffc45c;
-            transform: translateX(4px);
-        }
+    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+}
 
-        .completed-mission h3 {
-            color: #bd7aff;
-            margin-top: 0;
-            font-size: 21px;
-        }
+.avatar {
+    text-align: center;
+}
 
-        .completed-mission p {
-            color: #d4c5df;
-            line-height: 1.6;
-        }
+.avatar-circle {
+    width: 105px;
+    height: 105px;
+    border-radius: 50%;
+    margin: auto;
 
-        .completed-mission .xp {
-            color: #ffc45c;
-            font-weight: bold;
-        }
+    display: grid;
+    place-items: center;
 
-        .completed-mission .status {
-            color: #20c997;
-            font-weight: bold;
-        }
+    font-size: 43px;
+    background: linear-gradient(145deg, #9e2ac9, #42105f);
 
-        /* Footer */
-        .dashboard-footer {
-            text-align: center;
-            margin-top: 55px;
-            padding: 20px;
-            color: #b9a5c9;
-            font-size: 13px;
-        }
+    border: 4px solid #ffd36b;
+    box-shadow: 0 0 20px rgba(255,211,107,0.4);
+}
 
-        @media (max-width: 700px) {
-            .student-dashboard {
-                padding: 22px 5%;
-            }
+.avatar h3 {
+    color: #ffd36b;
+    font-family: Georgia, serif;
+    margin-top: 9px;
+    font-size: 17px;
+}
 
-            .dashboard-nav {
-                flex-direction: column;
-                align-items: center;
-            }
+.progress-details h2 {
+    font-family: Georgia, serif;
+    color: #fff0c9;
+    font-size: 23px;
+}
 
-            .nav-actions {
-                justify-content: center;
-            }
+.progress-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 13px;
+}
 
-            .dashboard-user {
-                margin: 15px auto 0;
-            }
+.progress-top strong {
+    color: #fff0c9;
+    font-size: 17px;
+}
 
-            .dashboard-stats {
-                grid-template-columns: 1fr;
-            }
+.progress-bar {
+    height: 15px;
+    background: #42284f;
+    border: 1px solid #a96cc1;
+    border-radius: 30px;
+    overflow: hidden;
+}
 
-            .welcome-section h1 {
-                font-size: 30px;
-            }
+.progress-fill {
+    height: 100%;
+    width: <%= progress %>%;
 
-            .missions-section {
-                padding: 22px;
-            }
-        }
+    background: linear-gradient(90deg, #ffcf45, #ff9d24);
+    border-radius: 30px;
 
-        @media (prefers-reduced-motion: reduce) {
-            .stat-card,
-            .completed-mission,
-            .nav-btn {
-                transition: none;
-            }
-        }
-    </style>
+    transition: width 0.7s ease;
+}
+
+.progress-percent {
+    text-align: right;
+    color: #ffd36b;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+/* STATISTICS CARDS */
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    min-height: 112px;
+    padding: 17px 19px;
+
+    background: linear-gradient(145deg,
+        rgba(255, 242, 222, 0.98),
+        rgba(250, 218, 187, 0.98));
+
+    border: 2px solid #e6ae42;
+    border-radius: 15px;
+
+    box-shadow: 0 5px 14px rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 9px 22px rgba(255,190,70,0.25);
+}
+
+.stat-symbol {
+    font-size: 29px;
+    color: #a34d83;
+}
+
+.stat-card h3 {
+    color: #59334f;
+    font-family: Georgia, serif;
+    font-size: 14px;
+    margin-bottom: 7px;
+}
+
+.stat-card h2 {
+    color: #32163d;
+    font-family: Georgia, serif;
+    font-size: 29px;
+}
+
+/* SECTION TITLE */
+
+.quick-title {
+    font-family: Georgia, serif;
+    color: #fff0d0;
+    font-size: 25px;
+    margin: 27px 0 16px;
+}
+
+/* QUICK ACCESS CARDS */
+
+.quick-links {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 19px;
+}
+
+.quick-card {
+    min-height: 125px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    padding: 20px 23px;
+
+    text-decoration: none;
+    color: #32163d;
+
+    background: linear-gradient(135deg,
+        rgba(255, 231, 224, 0.98),
+        rgba(249, 210, 211, 0.98));
+
+    border: 2px solid #e7ad40;
+    border-radius: 18px;
+
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+.quick-card:hover {
+    transform: translateY(-5px);
+    background: linear-gradient(135deg, #fff0d8, #f7d5e6);
+    box-shadow: 0 9px 25px rgba(255,191,74,0.3);
+}
+
+.quick-info {
+    flex: 1;
+}
+
+.quick-info h2 {
+    font-family: Georgia, serif;
+    font-size: 22px;
+    color: #35133f;
+    margin-bottom: 8px;
+}
+
+.quick-info p {
+    color: #4e3154;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.quick-icon {
+    display: none;
+}
+
+.arrow {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+
+    display: grid;
+    place-items: center;
+
+    background: #6c2387;
+    color: #ffd36b;
+
+    border: 2px solid #eab94e;
+    border-radius: 50%;
+
+    font-size: 22px;
+    transition: 0.3s;
+}
+
+.quick-card:hover .arrow {
+    transform: translateX(5px);
+    background: #8c30a9;
+}
+
+/* RECENT ACTIVITY */
+
+.activity-section {
+    margin-top: 26px;
+    padding: 20px 25px;
+
+    background: rgba(42, 17, 58, 0.97);
+    border: 2px solid #e7b348;
+    border-radius: 18px;
+
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.activity-section h2 {
+    font-family: Georgia, serif;
+    font-size: 23px;
+    color: #ffd36b;
+    margin-bottom: 13px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+
+    padding: 13px 7px;
+    border-top: 1px solid rgba(231,179,72,0.3);
+}
+
+.activity-left {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
+.check {
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+
+    display: grid;
+    place-items: center;
+
+    background: #239d65;
+    color: white;
+
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.activity-name {
+    font-size: 14px;
+    color: #f2e7f7;
+    line-height: 1.5;
+}
+
+.activity-date {
+    color: #c9b5d4;
+    font-size: 11px;
+}
+
+.activity-xp {
+    color: #ffd36b;
+    font-weight: bold;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.no-activity {
+    text-align: center;
+    padding: 22px;
+    color: #e2d1ec;
+    border-top: 1px solid rgba(231,179,72,0.3);
+}
+
+/* ERROR */
+
+.db-error {
+    padding: 14px;
+    margin-bottom: 20px;
+    border: 1px solid #ff8a8a;
+    border-radius: 10px;
+    background: rgba(120, 30, 40, 0.9);
+    color: white;
+}
+
+/* FOOTER */
+
+footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 25px;
+    color: #e0cce9;
+    font-size: 13px;
+    border-top: 1px solid rgba(231,179,72,0.3);
+}
+
+/* RESPONSIVE */
+
+@media(max-width: 950px) {
+    .stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .quick-links {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media(max-width: 650px) {
+    nav {
+        height: auto;
+        padding: 15px 5%;
+        flex-wrap: wrap;
+    }
+
+    .nav-links {
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .container {
+        width: 93%;
+    }
+
+    .welcome h1 {
+        font-size: 29px;
+    }
+
+    .progress-section {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .progress-top {
+        flex-direction: column;
+    }
+
+    .stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-card {
+        padding: 14px;
+    }
+
+    .stat-card h2 {
+        font-size: 23px;
+    }
+}
+
+</style>
+
 </head>
 
 <body>
 
-<div class="student-dashboard">
+<!-- NAVIGATION -->
 
-    <nav class="dashboard-nav">
+<nav>
 
-        <a href="studentHome.jsp" class="dashboard-logo">
-            CODE<span>QUEST</span>
-        </a>
+    <div class="logo">👑 CodeQuest</div>
 
-        <div class="nav-actions">
-
-            <a href="<%= request.getContextPath() %>/studentHome.jsp"
-               class="nav-btn">
-                🏠 Home
-            </a>
-
-            <a href="<%= request.getContextPath() %>/leaderboard"
-               class="nav-btn">
-                🏆 Leaderboard
-            </a>
-
-            <a href="<%= request.getContextPath() %>/logout"
-               class="nav-btn">
-                Logout →
-            </a>
-
-        </div>
-
-    </nav>
-
-    <div class="dashboard-user">
-        Logged in as: <%= userEmail %>
+    <div class="nav-links">
+        <a href="studentHome.jsp"> Home </a>
+        <a href="startQuest.jsp"> Start Quest</a>
+        <a href="leaderboard.jsp"> Leaderboard</a>
     </div>
 
-    <section class="welcome-section">
+    <a href="logout" class="nav-links logout">
+        Logout 
+    </a>
 
-        <p class="welcome-label">✦ YOUR LEARNING SPACE ✦</p>
+</nav>
+
+<div class="container">
+
+    <!-- WELCOME -->
+
+    <section class="welcome">
 
         <h1>
-            Welcome to <span>CodeQuest!</span>
+            Welcome Back, <span><%= displayName %></span> 
         </h1>
 
-        <p class="welcome-description">
-            Your programming journey continues here.
-            Explore missions, earn XP and improve your coding skills.
+        <p>
+            Continue your coding journey, complete missions and level up!
         </p>
+
+        <div class="welcome-line"></div>
 
     </section>
 
-    <section class="dashboard-stats">
+    <% if (dbError) { %>
+        <div class="db-error">
+            Unable to load dashboard information. Please check the database connection.
+        </div>
+    <% } %>
 
-        <div class="stat-card">
-            <div class="stat-icon">📚</div>
-            <p>Total Missions</p>
-            <h2><%= totalMissions %></h2>
+    <!-- PROGRESS -->
+
+    <section class="progress-section">
+
+        <div class="avatar">
+
+            <div class="avatar-circle">👑</div>
+
+            <h3>Level <%= currentLevel %></h3>
+
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon">⭐</div>
-            <p>Total XP</p>
-            <h2><%= totalXP %></h2>
-        </div>
+        <div class="progress-details">
 
-        <div class="stat-card">
-            <div class="stat-icon">👑</div>
-            <p>Current Level</p>
-            <h2><%= level %></h2>
-        </div>
+            <div class="progress-top">
 
-        <div class="stat-card">
-            <div class="stat-icon">🏆</div>
-            <p>Completed Missions</p>
-            <h2><%= completedMissions %></h2>
+                <h2>Your Progress</h2>
+
+                <strong><%= totalXP %> / 250 XP</strong>
+
+            </div>
+
+            <div class="progress-bar">
+
+                <div class="progress-fill"></div>
+
+            </div>
+
+            <div class="progress-percent">
+                <%= progress %>% Completed
+            </div>
+
         </div>
 
     </section>
 
-    <section class="missions-section">
+    <!-- STATISTICS -->
 
-        <h2 class="section-heading">
-            ✦ Your Programming Journey
-        </h2>
+    <section class="stats">
 
-        <p class="mission-message">
-            Here are the programming missions you have completed.
-        </p>
+        <div class="stat-card">
 
-        <%
-            if (completedMissionDetails.isEmpty()) {
-        %>
+            <div class="stat-symbol">⚑</div>
 
-            <p class="mission-message">
-                You haven't completed any missions yet.
-                Start solving challenges to earn XP!
-            </p>
+            <div>
+                <h3>Total Missions</h3>
+                <h2><%= totalMissions %></h2>
+            </div>
 
-        <%
-            } else {
-                for (String[] mission : completedMissionDetails) {
-        %>
+        </div>
 
-            <div class="completed-mission">
+        <div class="stat-card">
 
-                <h3><%= mission[0] %></h3>
+            <div class="stat-symbol">★</div>
 
-                <p>Category: <%= mission[1] %></p>
+            <div>
+                <h3>Total XP</h3>
+                <h2><%= totalXP %> XP</h2>
+            </div>
 
-                <p>Difficulty: <%= mission[2] %></p>
+        </div>
 
-                <p>Selected Answer: <%= mission[3] %></p>
+        <div class="stat-card">
 
-                <p class="xp">
-                    XP Earned: +<%= mission[4] %>
-                </p>
+            <div class="stat-symbol">♛</div>
 
-                <p class="status">
-                    Status: Completed ✓
+            <div>
+                <h3>Current Level</h3>
+                <h2>Level <%= currentLevel %></h2>
+            </div>
+
+        </div>
+
+        <div class="stat-card">
+
+            <div class="stat-symbol">✓</div>
+
+            <div>
+                <h3>Completed Missions</h3>
+                <h2><%= completedMissions %></h2>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- QUICK ACCESS -->
+
+    <h2 class="quick-title">Continue Your Adventure</h2>
+
+    <section class="quick-links">
+
+        <a href="startQuest.jsp" class="quick-card">
+
+            <div class="quick-info">
+
+                <h2>Start Your Quest</h2>
+
+                <p>
+                    Choose a level, solve challenges and earn XP.
                 </p>
 
             </div>
 
-        <%
-                }
-            }
-        %>
+            <div class="arrow">➜</div>
+
+        </a>
+
+        <a href="missions" class="quick-card">
+
+            <div class="quick-info">
+
+                <h2>Explore Missions</h2>
+
+                <p>
+                    Practice and complete programming missions.
+                </p>
+
+            </div>
+
+            <div class="arrow">➜</div>
+
+        </a>
+
+        <a href="leaderboard.jsp" class="quick-card">
+
+            <div class="quick-info">
+
+                <h2>View Leaderboard</h2>
+
+                <p>
+                    Track your rank and compete with other learners.
+                </p>
+
+            </div>
+
+            <div class="arrow">➜</div>
+
+        </a>
 
     </section>
 
-    <footer class="dashboard-footer">
-        Created by Buraga Akshaya · CodeQuest
-    </footer>
+    <!-- RECENT ACTIVITY -->
+
+    <section class="activity-section">
+
+        <h2>◷ Recent Activity</h2>
+
+        <% if (!recentActivities.isEmpty()) { %>
+
+            <% for (String[] activity : recentActivities) { %>
+
+                <div class="activity-item">
+
+                    <div class="activity-left">
+
+                        <div class="check">✓</div>
+
+                        <div class="activity-name">
+
+                            Completed: <%= activity[0] %>
+
+                            <div class="activity-date">
+                                <%= activity[1] %>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="activity-xp">
+                        +<%= activity[2] %> XP
+                    </div>
+
+                </div>
+
+            <% } %>
+
+        <% } else { %>
+
+            <div class="no-activity">
+
+                No completed missions yet.
+                Start your first mission and your activity will appear here!
+
+            </div>
+
+        <% } %>
+
+    </section>
 
 </div>
+
+<footer>
+    Created by Buraga Akshaya
+    <br><br>
+    © CodeQuest | Learn • Play • Level Up
+</footer>
 
 </body>
 </html>

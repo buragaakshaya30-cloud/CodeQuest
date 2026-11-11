@@ -9,387 +9,432 @@
         (List<String[]>) request.getAttribute("missions");
 
     String result = request.getParameter("result");
+    String ctx = request.getContextPath();
 %>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programming Missions | CodeQuest</title>
 
-    <title>Programming Missions | CodeQuest</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
 
-    
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+body {
+    min-height: 100vh;
+    font-family: 'DM Sans', sans-serif;
+    color: #fff8ed;
+    background:
+        linear-gradient(rgba(24, 9, 37, .87), rgba(24, 9, 37, .94)),
+        url('images/castle.png') center/cover fixed;
+}
 
-        body {
-            margin: 0;
-            background:
-                radial-gradient(ellipse at top, #281337 0%, #100817 65%);
-            color: #f8f2ff;
-            font-family: Arial, sans-serif;
-            min-height: 100vh;
-        }
+.page {
+    width: 90%;
+    max-width: 1150px;
+    margin: auto;
+    padding-bottom: 65px;
+}
 
-        .missions-container {
-            width: 90%;
-            max-width: 1250px;
-            margin: auto;
-            padding: 30px 0 70px;
-        }
+/* Navigation */
+.navbar {
+    min-height: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(225, 177, 92, .35);
+    gap: 15px;
+}
 
-        /* Navigation */
+.logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 25px;
+    font-weight: 800;
+    color: #ffe5a8;
+    text-decoration: none;
+}
 
-        .missions-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 5px 22px;
-            border-bottom: 1px solid #493052;
-        }
+.logo span {
+    color: #e9ad48;
+}
 
-        .logo {
-            font-size: 23px;
-            font-weight: bold;
-            color: white;
-            text-decoration: none;
-        }
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-wrap: wrap;
+}
 
-        .logo span {
-            color: #bd7aff;
-        }
+.student {
+    color: #e8d9c7;
+    font-size: 13px;
+}
 
-        .missions-nav a.dashboard-link {
-            color: #d49aff;
-            text-decoration: none;
-            font-weight: bold;
-        }
+.back-link {
+    color: #f5c96f;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+}
 
-        .missions-nav a.dashboard-link:hover {
-            color: #ffbd45;
-        }
+.back-link:hover {
+    color: white;
+}
 
-        /* Heading */
+/* Heading */
+.hero {
+    text-align: center;
+    padding: 58px 0 38px;
+}
 
-        .missions-heading {
-            text-align: center;
-            margin: 55px 0 40px;
-        }
+.eyebrow {
+    color: #e8b34f;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 4px;
+}
 
-        .eyebrow {
-            color: #ffbd45;
-            letter-spacing: 4px;
-            font-size: 13px;
-            font-weight: bold;
-        }
+.hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(34px, 5vw, 52px);
+    color: #ffe4ae;
+    margin: 13px 0;
+}
 
-        .missions-heading h1 {
-            font-size: clamp(30px, 5vw, 48px);
-            margin: 15px 0 10px;
-            color: #d49aff;
-        }
+.hero p {
+    color: #d8c7df;
+    font-size: 15px;
+}
 
-        .missions-heading p {
-            color: #c8b9d4;
-            font-size: 16px;
-        }
+/* Result message */
+.result-message {
+    max-width: 850px;
+    margin: 0 auto 25px;
+    padding: 15px 20px;
+    border-radius: 18px;
+    text-align: center;
+    background: rgba(255, 226, 175, .12);
+    border: 1px solid #d8ad5d;
+    color: #ffe5ad;
+    font-weight: 700;
+}
 
-        /* Result messages */
+.result-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
 
-        .result-message {
-            max-width: 850px;
-            margin: 0 auto 25px;
-            padding: 16px 20px;
-            border-radius: 12px;
-            text-align: center;
-            font-weight: bold;
-        }
+.result-actions a {
+    text-decoration: none;
+    padding: 12px 20px;
+    border-radius: 30px;
+    color: #321b39;
+    background: #e8bd68;
+    font-weight: 800;
+}
 
-        .success-message {
-            background: #123c2b;
-            border: 1px solid #37c987;
-            color: #8df5bd;
-        }
-
-        .error-message {
-            background: #451d32;
-            border: 1px solid #d75b8d;
-            color: #ffb2d0;
-        }
-
-        /* Mission cards */
-
-        .mission-grid {
+/* Mission cards */
+.mission-grid {
     display: grid;
     grid-template-columns: minmax(0, 850px);
     justify-content: center;
     gap: 25px;
-    width: 100%;
 }
 
-        .mission-card {
-            background: linear-gradient(145deg, #291936, #191020);
-            border: 1px solid #694080;
-            border-radius: 20px;
-            padding: 27px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-            transition: 0.3s ease;
-        }
+.mission-card {
+    position: relative;
+    overflow: hidden;
+    padding: 32px;
+    border-radius: 30px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 239, 216, .98),
+        rgba(246, 216, 207, .98)
+    );
+    color: #38203e;
+    border: 1px solid rgba(238, 190, 102, .95);
+    box-shadow: 0 16px 45px rgba(0, 0, 0, .22);
+    transition: transform .25s ease, box-shadow .25s ease;
+}
 
-        .mission-card:hover {
-            transform: translateY(-5px);
-            border-color: #bd7aff;
-            box-shadow: 0 10px 35px rgba(151, 72, 210, 0.2);
-        }
+.mission-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, .3);
+}
 
-        .card-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 22px;
-        }
+.card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 22px;
+}
 
-        .mission-number {
-            color: #ffbd45;
-            font-size: 13px;
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
+.mission-number {
+    color: #9b6725;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
 
-        .difficulty {
-            padding: 7px 14px;
-            border: 1px solid #bd7aff;
-            border-radius: 30px;
-            color: #d49aff;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
+.difficulty {
+    padding: 7px 16px;
+    border-radius: 30px;
+    background: #f2dfbd;
+    color: #805321;
+    border: 1px solid #d9b36b;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
 
-        .mission-card h2 {
-            color: #d49aff;
-            font-size: 25px;
-            margin: 0 0 12px;
-        }
+.mission-card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 27px;
+    color: #48264c;
+    margin-bottom: 12px;
+}
 
-        .mission-description {
-            color: #e2d6ed;
-            line-height: 1.7;
-            font-size: 16px;
-            min-height: 50px;
-        }
+.mission-description {
+    color: #654f66;
+    line-height: 1.8;
+    font-size: 15px;
+    white-space: pre-wrap;
+}
 
-        .mission-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 20px 0;
-        }
+.mission-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
 
-        .meta-item {
-            background: #352342;
-            padding: 8px 12px;
-            border-radius: 8px;
-            color: #d7c2e8;
-            font-size: 13px;
-        }
+.meta-item {
+    padding: 9px 15px;
+    border-radius: 30px;
+    background: #f5e5d2;
+    color: #76512e;
+    font-size: 12px;
+    font-weight: 700;
+}
 
-        /* Question area */
+/* Question section */
+.question-area {
+    border-top: 1px solid #e1c6a9;
+    margin-top: 24px;
+    padding-top: 23px;
+}
 
-        .question-area {
-            border-top: 1px solid #493052;
-            padding-top: 20px;
-            margin-top: 20px;
-        }
+.question-label {
+    color: #98651e;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.7px;
+    margin-bottom: 15px;
+}
 
-        .question-label {
-            color: #ffbd45;
-            font-size: 13px;
-            font-weight: bold;
-            letter-spacing: 1.5px;
-            margin-bottom: 15px;
-        }
+.answer-option {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 15px 17px;
+    margin-bottom: 11px;
+    border: 1px solid #e4cbb2;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .48);
+    color: #49334c;
+    font-size: 14px;
+    cursor: pointer;
+    transition: .2s ease;
+}
 
-        .answer-option {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: #21152d;
-            border: 1px solid #493052;
-            border-radius: 10px;
-            padding: 13px 15px;
-            margin-bottom: 11px;
-            cursor: pointer;
-            color: #f4eafa;
-            transition: 0.2s ease;
-        }
+.answer-option:hover {
+    border-color: #bd8736;
+    background: #fff4e2;
+    transform: translateX(3px);
+}
 
-        .answer-option:hover {
-            border-color: #bd7aff;
-            background: #352044;
-        }
+.answer-option input {
+    width: 17px;
+    height: 17px;
+    accent-color: #98602c;
+    cursor: pointer;
+    flex-shrink: 0;
+}
 
-        .answer-option input {
-            accent-color: #bd7aff;
-            width: 17px;
-            height: 17px;
-            cursor: pointer;
-        }
+.answer-option:has(input:checked) {
+    border-color: #a66b2c;
+    background: #f8e4c2;
+    box-shadow: 0 0 0 2px rgba(166, 107, 44, .12);
+}
 
-        .answer-option:has(input:checked) {
-            border-color: #bd7aff;
-            background: #402553;
-        }
+/* Card footer */
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-top: 23px;
+    padding-top: 20px;
+    border-top: 1px solid #e1c6a9;
+}
 
-        /* Card footer */
+.xp-reward {
+    color: #98651e;
+    font-weight: 800;
+    font-size: 17px;
+    white-space: nowrap;
+}
 
-        .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-top: 23px;
-            padding-top: 18px;
-            border-top: 1px solid #493052;
-        }
+.submit-btn {
+    padding: 14px 25px;
+    border: 1px solid #f3d18b;
+    border-radius: 30px;
+    color: #38203e;
+    background: linear-gradient(110deg, #e6b85e, #f6d58f);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: .25s ease;
+}
 
-        .xp-reward {
-            color: #ffbd45;
-            font-weight: bold;
-            font-size: 18px;
-            white-space: nowrap;
-        }
+.submit-btn:hover {
+    background: #ffdf9b;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(143, 94, 31, .2);
+}
 
-        .submit-btn {
-            padding: 13px 20px;
-            background: linear-gradient(100deg, #8135bd, #a64de0);
-            border: 1px solid #d49aff;
-            border-radius: 10px;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s ease;
-        }
+.empty-message {
+    max-width: 850px;
+    margin: auto;
+    padding: 45px 25px;
+    border-radius: 28px;
+    background: rgba(255, 239, 216, .96);
+    color: #49334c;
+    text-align: center;
+}
 
-        .submit-btn:hover {
-            background: linear-gradient(100deg, #a64de0, #c477ff);
-            box-shadow: 0 0 20px rgba(189, 122, 255, 0.4);
-            transform: translateY(-2px);
-        }
+.empty-message h2 {
+    font-family: 'Playfair Display', serif;
+    margin-bottom: 12px;
+}
 
-        .empty-message {
-            background: #21152d;
-            border: 1px solid #493052;
-            padding: 30px;
-            border-radius: 15px;
-            color: #c8b9d4;
-            text-align: center;
-        }
+.login-note {
+    text-align: center;
+    margin-top: 30px;
+    color: #e2d3e8;
+    font-size: 14px;
+}
 
-        .login-note {
-            color: #c8b9d4;
-            text-align: center;
-            margin-top: 30px;
-            font-size: 14px;
-        }
+.login-note a {
+    color: #f2c66d;
+    text-decoration: none;
+    font-weight: 800;
+}
 
-        .login-note a {
-            color: #d49aff;
-            text-decoration: none;
-            font-weight: bold;
-        }
+.footer {
+    text-align: center;
+    padding: 25px 10px;
+    color: #cbb7d1;
+    font-size: 12px;
+}
 
-        @media (max-width: 750px) {
-            .mission-grid {
-                grid-template-columns: 1fr;
-            }
+@media(max-width: 650px) {
+    .page {
+        width: 92%;
+    }
 
-            .missions-container {
-                width: 92%;
-            }
+    .navbar {
+        padding: 15px 0;
+        align-items: flex-start;
+    }
 
-            .missions-heading {
-                margin: 40px 0 30px;
-            }
-        }
+    .nav-right {
+        gap: 12px;
+        justify-content: flex-end;
+    }
 
-        @media (max-width: 450px) {
-            .mission-card {
-                padding: 19px;
-            }
+    .student {
+        display: none;
+    }
 
-            .card-footer {
-                align-items: flex-start;
-                flex-direction: column;
-            }
+    .hero {
+        padding: 40px 0 30px;
+    }
 
-            .submit-btn {
-                width: 100%;
-            }
-        }
-    </style>
+    .mission-card {
+        padding: 23px 19px;
+        border-radius: 24px;
+    }
+
+    .mission-card h2 {
+        font-size: 23px;
+    }
+
+    .card-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .submit-btn {
+        width: 100%;
+    }
+}
+</style>
 </head>
 
 <body>
+<div class="page">
 
-<div class="missions-container">
-
-    <nav class="missions-nav">
-
-        <a href="<%= request.getContextPath() %>/index.jsp"
-           class="logo">
-            CODE<span>QUEST</span>
+    <nav class="navbar">
+        <a class="logo" href="<%= ctx %>/studentDashboard.jsp">
+            👑 Code<span>Quest</span>
         </a>
 
-        <span>
-            <%= userEmail == null ? "Guest Player" : "Student: " + userEmail %>
-        </span>
+        <div class="nav-right">
+            <span class="student">
+                <%= userEmail == null ? "Guest Player" : "Student: " + userEmail %>
+            </span>
 
-        <% if (userEmail != null) { %>
-           <a class="dashboard-link"
-   href="<%= request.getContextPath() %>/studentDashboard.jsp">
-   ← Back to Dashboard
-</a>
-        <% } else { %>
-            <a class="dashboard-link"
-               href="<%= request.getContextPath() %>/login.jsp">
-                Login →
-            </a>
-        <% } %>
-
+            <% if (userEmail != null) { %>
+                <a class="back-link" href="<%= ctx %>/studentDashboard.jsp">
+                    ← Back to Dashboard
+                </a>
+            <% } else { %>
+                <a class="back-link" href="<%= ctx %>/login.jsp">
+                    Login →
+                </a>
+            <% } %>
+        </div>
     </nav>
 
-    <section class="missions-heading">
-
+    <section class="hero">
         <div class="eyebrow">⚔ YOUR NEXT CHALLENGE AWAITS ⚔</div>
-
         <h1>Choose Your Mission</h1>
-
         <p>Test your programming skills, earn XP and level up!</p>
-
     </section>
 
-   <% if (result != null && userEmail != null) { %>
+    <% if (result != null && userEmail != null) { %>
+        <div class="result-message">
+            Your answer has been submitted. Check your updated XP and progress.
+        </div>
 
-<div class="result-actions">
-
-    <a href="<%= request.getContextPath() %>/studentDashboard.jsp">
-        FINISH & BACK TO DASHBOARD
-    </a>
-
-    <a href="<%= request.getContextPath() %>/missions">
-        VIEW MISSIONS
-    </a>
-
-</div>
-
-<% } %>
+        <div class="result-actions">
+            <a href="<%= ctx %>/studentDashboard.jsp">Finish & Back to Dashboard</a>
+            <a href="<%= ctx %>/missions">View Missions</a>
+        </div>
+    <% } %>
 
     <% if (missions == null || missions.isEmpty()) { %>
 
@@ -401,7 +446,6 @@
     <% } else { %>
 
         <div class="mission-grid">
-
             <% int count = 1; %>
 
             <% for (String[] mission : missions) { %>
@@ -409,7 +453,6 @@
                 <div class="mission-card">
 
                     <div class="card-top">
-
                         <span class="mission-number">
                             MISSION <%= count++ %>
                         </span>
@@ -417,71 +460,46 @@
                         <span class="difficulty">
                             <%= mission[4] %>
                         </span>
-
                     </div>
 
                     <h2><%= mission[1] %></h2>
 
-                    <p class="mission-description">
-                        <%= mission[2] %>
-                    </p>
+                    <p class="mission-description"><%= mission[2] %></p>
 
                     <div class="mission-meta">
-
-                        <span class="meta-item">
-                            📚 <%= mission[3] %>
-                        </span>
-
-                        <span class="meta-item">
-                            ⚡ <%= mission[4] %>
-                        </span>
-
+                        <span class="meta-item">📚 <%= mission[3] %></span>
+                        <span class="meta-item">⚡ <%= mission[9] %> XP</span>
                     </div>
 
                     <div class="question-area">
+                        <div class="question-label">SELECT YOUR ANSWER</div>
 
-                        <div class="question-label">
-                            SELECT YOUR ANSWER
-                        </div>
+                        <form action="<%= ctx %>/submitAnswer" method="post">
 
-                        <form action="<%= request.getContextPath() %>/submitAnswer"
-                              method="post">
-
-                            <input type="hidden"
-                                   name="missionId"
+                            <input type="hidden" name="missionId"
                                    value="<%= mission[0] %>">
 
                             <label class="answer-option">
-                                <input type="radio"
-                                       name="answer"
-                                       value="A"
-                                       required>
+                                <input type="radio" name="answer" value="A" required>
                                 <span>A. <%= mission[5] %></span>
                             </label>
 
                             <label class="answer-option">
-                                <input type="radio"
-                                       name="answer"
-                                       value="B">
+                                <input type="radio" name="answer" value="B">
                                 <span>B. <%= mission[6] %></span>
                             </label>
 
                             <label class="answer-option">
-                                <input type="radio"
-                                       name="answer"
-                                       value="C">
+                                <input type="radio" name="answer" value="C">
                                 <span>C. <%= mission[7] %></span>
                             </label>
 
                             <label class="answer-option">
-                                <input type="radio"
-                                       name="answer"
-                                       value="D">
+                                <input type="radio" name="answer" value="D">
                                 <span>D. <%= mission[8] %></span>
                             </label>
 
                             <div class="card-footer">
-
                                 <span class="xp-reward">
                                     🏆 +<%= mission[9] %> XP
                                 </span>
@@ -489,32 +507,28 @@
                                 <button type="submit" class="submit-btn">
                                     SUBMIT ANSWER →
                                 </button>
-
                             </div>
 
                         </form>
-
                     </div>
-
                 </div>
 
             <% } %>
-
         </div>
 
     <% } %>
 
     <% if (userEmail == null) { %>
-
         <p class="login-note">
-            Want to earn XP? <a href="<%= request.getContextPath() %>/login.jsp">
-                Login to submit your answers.
-            </a>
+            Want to earn XP?
+            <a href="<%= ctx %>/login.jsp">Login to submit your answers.</a>
         </p>
-
     <% } %>
 
-</div>
+    <footer class="footer">
+        Created by Buraga Akshaya · CodeQuest
+    </footer>
 
+</div>
 </body>
 </html>

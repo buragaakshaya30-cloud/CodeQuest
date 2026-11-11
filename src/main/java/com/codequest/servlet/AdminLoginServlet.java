@@ -43,8 +43,10 @@ public class AdminLoginServlet extends HttpServlet {
                 request.getContextPath() + "/adminDashboard.jsp");
 
         } else {
-            request.setAttribute("error", "Invalid username or password.");
-            request.getRequestDispatcher("adminLogin.jsp")
+            request.setAttribute("error",
+                "Invalid username or password.");
+
+            request.getRequestDispatcher("/adminLogin.jsp")
                    .forward(request, response);
         }
     }

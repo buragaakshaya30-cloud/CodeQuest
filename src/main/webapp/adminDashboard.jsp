@@ -302,6 +302,27 @@
                 text-align: center;
             }
         }
+        .leaderboard-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    border: 1.5px solid #e6b84d;
+    border-radius: 30px;
+    color: #ffd36f !important;
+    text-decoration: none !important;
+    font-size: 15px;
+    font-weight: 600;
+    background: rgba(42, 17, 57, 0.65);
+    transition: all 0.3s ease;
+}
+
+.leaderboard-nav-btn:hover {
+    background: #e6b84d;
+    color: #291337 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 18px rgba(230, 184, 77, 0.25);
+}
         
     </style>
 </head>
@@ -319,13 +340,11 @@
 
         <div class="nav-actions">
 
-            <a href="<%= context %>/leaderboard" class="nav-btn">
-                🏆 Leaderboard
-            </a>
 
-            <a href="<%= context %>/adminlogout" class="nav-btn">
-                Logout ↗
-            </a>
+<a href="<%= request.getContextPath() %>/adminlogout"
+   class="nav-btn">
+    Logout ↗
+</a>
 
         </div>
 
@@ -367,7 +386,13 @@
         </a>
 
         <a href="<%= context %>/studentPerformance" class="quick-card">
-            <div class="quick-icon">▥</div>
+          <div class="quick-icon">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="white">
+        <rect x="4" y="17" width="6" height="11" rx="1"/>
+        <rect x="13" y="10" width="6" height="18" rx="1"/>
+        <rect x="22" y="4" width="6" height="24" rx="1"/>
+    </svg>
+</div>
             <h3>Student Performance</h3>
             <p>Review student progress and mission submissions.</p>
         </a>
@@ -402,12 +427,21 @@
                class="action-btn">
                 ☷ Manage Missions
             </a>
+<a href="<%= context %>/studentPerformance"
+   class="action-btn">
 
-            <a href="<%= context %>/studentPerformance"
-               class="action-btn">
-                ▥ View Student Performance
-            </a>
+    <svg width="16" height="16" viewBox="0 0 32 32"
+         fill="gold"
+         style="vertical-align: middle; margin-right: 5px;">
 
+        <rect x="4" y="17" width="6" height="11" rx="1"/>
+        <rect x="13" y="10" width="6" height="18" rx="1"/>
+        <rect x="22" y="4" width="6" height="24" rx="1"/>
+
+    </svg>
+
+    View Student Performance
+</a>
         </div>
 
     </section>
