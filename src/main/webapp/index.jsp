@@ -1,60 +1,12 @@
-
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
     String context = request.getContextPath();
 
-    if (session.getAttribute("userEmail") != null) {
-        response.sendRedirect(context + "/studentHome.jsp");
-        return;
-    }
-
-    if (session.getAttribute("adminUsername") != null) {
-        response.sendRedirect(context + "/adminDashboard.jsp");
-        return;
-    }
-%>
-<%
     response.setHeader("Cache-Control",
         "no-cache, no-store, must-revalidate, private");
     response.setHeader("Pragma", "no-cache");
     response.setDateHeader("Expires", 0);
-
-    if (session.getAttribute("userEmail") != null) {
-        response.sendRedirect(
-            request.getContextPath() + "/studentHome.jsp");
-        return;
-    }
-
-    if (session.getAttribute("adminUsername") != null) {
-        response.sendRedirect(
-            request.getContextPath() + "/adminDashboard.jsp");
-        return;
-    }
-%>
-<%
-    response.setHeader("Cache-Control",
-        "no-cache, no-store, must-revalidate, private");
-    response.setHeader("Pragma", "no-cache");
-    response.setDateHeader("Expires", 0);
-
-    if (session.getAttribute("adminUsername") != null &&
-        session.getAttribute("adminId") != null) {
-
-        response.sendRedirect(
-            request.getContextPath() + "/adminDashboard.jsp"
-        );
-        return;
-    }
-
-    if (session.getAttribute("userEmail") != null &&
-        session.getAttribute("userId") != null) {
-
-        response.sendRedirect(
-            request.getContextPath() + "/studentHome.jsp"
-        );
-        return;
-    }
 %>
 
 <!DOCTYPE html>

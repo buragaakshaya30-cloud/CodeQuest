@@ -1,12 +1,16 @@
 
 package com.codequest.dao;
 
+
+
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.ArrayList;
+import org.mindrot.jbcrypt.BCrypt;
 
 import com.codequest.util.DBConnection;
 
@@ -51,43 +55,86 @@ public class UserDAO {
     }
 
     // Register a new student
-    public boolean registerUser(String username, String email, String password) {
-        String sql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+public boolean registerUser(String username, String email, String password) {
 
-            ps.setString(1, username);
-            ps.setString(2, email);
-            ps.setString(3, password);
+    String sql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
 
-            return ps.executeUpdate() > 0;
+    String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
+    try (Connection con = DBConnection.getConnection();
+         PreparedStatement ps = con.prepareStatement(sql)) {
+
+        ps.setString(1, username);
+        ps.setString(2, email);
+        ps.setString(3, hashedPassword);
+
+        return ps.executeUpdate() > 0;
+
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+
+    return false;
+}
+
 
     // Validate student login
-    public boolean validateUser(String email, String password) {
-        String sql = "SELECT id FROM users WHERE email = ? AND password = ?";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+public boolean validateUser(String email, String password) {
 
-            ps.setString(1, email);
-            ps.setString(2, password);
+    String sql = "SELECT id, password FROM users WHERE email = ?";
 
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
+    try (Connection con = DBConnection.getConnection();
+         PreparedStatement ps = con.prepareStatement(sql)) {
+
+        ps.setString(1, email);
+
+        try (ResultSet rs = ps.executeQuery()) {
+
+            if (!rs.next()) {
+                return false;
             }
 
-        } catch (SQLException e) {
-            e.printStackTrace();
+            int userId = rs.getInt("id");
+            String storedPassword = rs.getString("password");
+
+            boolean isBCrypt =
+                storedPassword.startsWith("$2a$") ||
+                storedPassword.startsWith("$2b$") ||
+                storedPassword.startsWith("$2y$");
+
+            boolean valid = isBCrypt
+                ? BCrypt.checkpw(password, storedPassword)
+                : storedPassword.equals(password);
+
+            if (valid && !isBCrypt) {
+
+                String hashedPassword =
+                    BCrypt.hashpw(password, BCrypt.gensalt(12));
+
+                String updateSQL =
+                    "UPDATE users SET password = ? WHERE id = ?";
+
+                try (PreparedStatement update =
+                         con.prepareStatement(updateSQL)) {
+
+                    update.setString(1, hashedPassword);
+                    update.setInt(2, userId);
+                    update.executeUpdate();
+                }
+            }
+
+            return valid;
         }
-        return false;
+
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+
+    return false;
+}
+
 
     // Get student username using email
     public String getUsername(String email) {
